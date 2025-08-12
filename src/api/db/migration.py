@@ -34,6 +34,7 @@ from api.config import (
     course_generation_jobs_table_name,
     task_generation_jobs_table_name,
     code_drafts_table_name,
+    integrations_table_name,
 )
 
 
@@ -311,7 +312,6 @@ async def add_missing_timestamp_columns():
         ]
 
         for table_name, columns_to_add in tables_to_update:
-            print(table_name)
             # Check if table exists
             await cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -430,6 +430,18 @@ async def add_missing_timestamp_columns():
         await conn.commit()
 
 
+async def create_integrations_table_migration():
+    """
+    Migration: Creates the integrations table if it doesn't exist.
+    """
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        from api.db import create_integrations_table
+
+        await create_integrations_table(cursor)
+
+        await conn.commit()
+
+
 async def run_migrations():
-    await remove_openai_columns_from_organizations()
-    await add_missing_timestamp_columns()
+    await create_integrations_table_migration()

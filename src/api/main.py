@@ -22,6 +22,7 @@ from api.routes import (
     file,
     ai,
     scorecard,
+    integration,
 )
 from api.routes.ai import (
     resume_pending_task_generation_jobs,
@@ -119,8 +120,14 @@ app.include_router(scorecard.router, prefix="/scorecards", tags=["scorecards"])
 app.include_router(code.router, prefix="/code", tags=["code"])
 app.include_router(hva.router, prefix="/hva", tags=["hva"])
 app.include_router(websocket_router, prefix="/ws", tags=["websockets"])
+app.include_router(integration.router, prefix="/integrations", tags=["integrations"])
 
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     return {"status": "ok"}
+
+
+@app.api_route("/bugsnag-debug", methods=["GET"])
+async def bugsnag_debug():
+    bugsnag.notify(Exception("Test error"))
