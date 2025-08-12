@@ -167,3 +167,25 @@ async def download_file_locally(
         logger.error(f"Error downloading file locally: {str(e)}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to download file locally")
+
+@router.get("/metadata")
+async def get_file_metadata(uuid: str):
+    try:
+        # Ensure upload folder exists
+        if not os.path.exists(settings.local_upload_folder):
+            raise HTTPException(status_code=404, detail="Upload folder not found")
+
+        # Look for file with this UUID
+        for filename in os.listdir(settings.local_upload_folder):
+            if filename.startswith(uuid):
+                extension = filename.split(".")[-1]
+                return {"extension": extension}
+
+        raise HTTPException(status_code=404, detail="File not found")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching file metadata: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to get file metadata")

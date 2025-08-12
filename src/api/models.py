@@ -244,6 +244,7 @@ class TaskInputType(Enum):
     CODE = "code"
     TEXT = "text"
     AUDIO = "audio"
+    FILE = "file"
 
     def __str__(self):
         return self.value
@@ -468,6 +469,7 @@ class ChatResponseType(str, Enum):
     TEXT = "text"
     CODE = "code"
     AUDIO = "audio"
+    FILE = "file"
 
 
 class ChatMessage(BaseModel):

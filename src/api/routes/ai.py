@@ -86,6 +86,60 @@ def get_user_audio_message_for_chat_history(uuid: str) -> List[Dict]:
         },
     ]
 
+def get_user_file_message_for_chat_history(uuid: str) -> List[Dict]:
+    """
+    Retrieve a file message for chat history, either from S3 or local storage.
+
+    Args:
+        uuid (str): The unique file identifier.
+
+    Returns:
+        List[Dict]: A list of message blocks for the chat history.
+    """
+    # Get file extension from metadata function
+    metadata = get_file_metadata_sync(uuid)  # Using a sync wrapper
+    extension = metadata["extension"]
+
+    if settings.s3_folder_name:
+        # Download from S3 as bytes
+        file_data = download_file_from_s3_as_bytes(
+            get_media_upload_s3_key_from_uuid(uuid, extension)
+        )
+    else:
+        # Read from local storage
+        file_path = os.path.join(settings.local_upload_folder, f"{uuid}.{extension}")
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+            
+                
+
+    return [
+        {
+            "type": "text",
+            "text": "Student's File Response:",
+        },
+        {
+            "type": "file",
+            "file": {
+                "file_id":prepare_audio_input_for_ai(file_data)
+            },
+        },
+    ]
+
+
+def get_file_metadata_sync(uuid: str) -> dict:
+    """
+    Synchronous version of get_file_metadata for internal use.
+    """
+    if not os.path.exists(settings.local_upload_folder):
+        raise HTTPException(status_code=404, detail="Upload folder not found")
+
+    for filename in os.listdir(settings.local_upload_folder):
+        if filename.startswith(uuid):
+            extension = filename.split(".")[-1]
+            return {"extension": extension}
+
+    raise HTTPException(status_code=404, detail="File not found")
 
 def get_ai_message_for_chat_history(ai_message: Dict) -> str:
     message = json.loads(ai_message)
@@ -213,12 +267,17 @@ async def ai_response_for_question(request: AIChatRequest):
     task_metadata = await get_task_metadata(request.task_id)
     if task_metadata:
         metadata.update(task_metadata)
+    print('@@@@@@@@@@@@@',chat_history)    
 
     for message in chat_history:
         if message["role"] == "user":
             if request.response_type == ChatResponseType.AUDIO:
                 message["content"] = get_user_audio_message_for_chat_history(
                     message["content"]
+                )
+            elif request.response_type == ChatResponseType.FILE:
+                message["content"] = get_user_file_message_for_chat_history(
+                    message["file_data"]
                 )
             else:
                 message["content"] = get_user_message_for_chat_history(
@@ -233,6 +292,8 @@ async def ai_response_for_question(request: AIChatRequest):
     user_message = (
         get_user_audio_message_for_chat_history(request.user_response)
         if request.response_type == ChatResponseType.AUDIO
+        else get_user_file_message_for_chat_history(request.user_response)
+        if request.response_type == ChatResponseType.FILE
         else get_user_message_for_chat_history(request.user_response)
     )
 
@@ -306,6 +367,8 @@ async def ai_response_for_question(request: AIChatRequest):
             try:
                 if request.response_type == ChatResponseType.AUDIO:
                     model = openai_plan_to_model_name["audio"]
+                elif request.response_type == ChatResponseType.FILE:
+                    model = openai_plan_to_model_name['audio']    
                 else:
 
                     class Output(BaseModel):
