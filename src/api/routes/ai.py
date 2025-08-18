@@ -368,7 +368,7 @@ async def ai_response_for_question(request: AIChatRequest):
                 if request.response_type == ChatResponseType.AUDIO:
                     model = openai_plan_to_model_name["audio"]
                 elif request.response_type == ChatResponseType.FILE:
-                    model = openai_plan_to_model_name['audio']    
+                    model = openai_plan_to_model_name['file']    
                 else:
 
                     class Output(BaseModel):
